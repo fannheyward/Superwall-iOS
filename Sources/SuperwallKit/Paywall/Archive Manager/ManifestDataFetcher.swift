@@ -33,7 +33,10 @@ struct ManifestDataFetcher: TaskExecutor {
       url: manifest.url,
       cachePolicy: .returnCacheDataElseLoad
     )
-    let (data, _) = try await urlSession.data(for: request)
+    let (data, response) = try await urlSession.data(for: request)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+      throw ArchivingError.invalidResponse(resource: manifest.url)
+    }
 
     return ArchiveManifestItemDownloaded(
       url: manifest.url,
