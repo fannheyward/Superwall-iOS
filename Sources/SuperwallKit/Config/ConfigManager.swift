@@ -18,12 +18,19 @@ class ConfigManager {
       .eraseToAnyPublisher()
   }
 
-  /// The configuration of the Superwall dashboard
-  var configState = CurrentValueSubject<ConfigState, Error>(.retrieving)
+  let configUpdates = CurrentValueSubject<ConfigState, Never>(.retrieving)
+
+  /// Fail an individual wait without ending observation for subsequent attempts.
+  var configState: AnyPublisher<ConfigState, Error> {
+    configUpdates.tryMap { state in
+      if case .failed(let error) = state { throw error }
+      return state
+    }.eraseToAnyPublisher()
+  }
 
   /// Convenience variable to access config.
   var config: Config? {
-    return configState.value.getConfig()
+    return configUpdates.value.getConfig()
   }
 
   /// Options for configuring the SDK.
@@ -331,7 +338,7 @@ class ConfigManager {
       } else {
         let config = try await network.getConfig { [weak self] attempt in
           self?.configRetryCount = attempt
-          self?.configState.send(.retrying)
+          self?.configUpdates.send(.retrying)
         }
         return ConfigFetchResult(
           config: config,
@@ -429,7 +436,7 @@ class ConfigManager {
   }
 
   private func handleConfigFetchError(_ error: Error) {
-    configState.send(completion: .failure(error))
+    configUpdates.send(.failed(error))
 
     Task {
       let configFallback = InternalSuperwallEvent.ConfigFail(
@@ -543,7 +550,7 @@ class ConfigManager {
           await factory.loadPurchasedProducts(config: config)
         }
         setInitialPurchasesLoad(purchasesLoad)
-        configState.send(.retrieved(config))
+        configUpdates.send(.retrieved(config))
         hasPublishedConfig = true
         await purchasesLoad.value
       } else {
@@ -574,7 +581,7 @@ class ConfigManager {
     // Last on purpose: the test mode modal above waits for the tester to pick
     // entitlements, and anything waiting on config must see that choice.
     if !hasPublishedConfig {
-      configState.send(.retrieved(config))
+      configUpdates.send(.retrieved(config))
     }
   }
 
@@ -669,7 +676,7 @@ class ConfigManager {
 
   // MARK: - Preloading Paywalls
   private func getTreatmentPaywallIds(from triggers: Set<Trigger>) async -> Set<String> {
-    guard let config = configState.value.getConfig() else {
+    guard let config else {
       return []
     }
     let preloadableTriggers = ConfigLogic.filterTriggers(

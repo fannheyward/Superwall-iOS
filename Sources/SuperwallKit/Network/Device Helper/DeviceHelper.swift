@@ -1095,7 +1095,7 @@ class DeviceHelper {
   /// Starts the IP lookups with the current config, for when an AppsFlyer ID is set.
   @discardableResult
   func startIPCollectionIfEnabled() -> Task<Void, Never>? {
-    return startIPCollectionIfEnabled(for: factory.makeConfigState().value.getConfig())
+    return startIPCollectionIfEnabled(for: factory.makeConfig())
   }
 
   func getEnrichment(
@@ -1229,7 +1229,7 @@ class DeviceHelper {
     await ipCollector.record(enrichmentDict.compactMapValues { $0 as? String })
     // IP collection is for the MMP, which is off unless the backend turns it on,
     // and for AppsFlyer, which only gets the IPv4 address.
-    switch ipCollection(for: factory.makeConfigState().value.getConfig()) {
+    switch ipCollection(for: factory.makeConfig()) {
     case .none:
       break
     case .ipV4ForAppsFlyer:

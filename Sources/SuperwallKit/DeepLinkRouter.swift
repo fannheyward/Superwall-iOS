@@ -132,7 +132,7 @@ final class DeepLinkRouter {
   }
 
   private func listenToConfig() {
-    configManager.configState
+    configManager.configUpdates
       .subscribe(
         Subscribers.Sink(
           receiveCompletion: { _ in },

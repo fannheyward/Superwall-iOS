@@ -663,7 +663,7 @@ public final class Superwall: NSObject, ObservableObject {
   }
 
   private func listenToConfig() {
-    dependencyContainer.configManager.configState
+    dependencyContainer.configManager.configUpdates
       .receive(on: DispatchQueue.main)
       .subscribe(
         Subscribers.Sink(
@@ -1020,6 +1020,20 @@ public final class Superwall: NSObject, ObservableObject {
       await refreshConfiguration()
       completion?()
     }
+  }
+
+  /// Retries a failed initial configuration on this instance. Completion runs
+  /// after the attempt, including its initial StoreKit read on success.
+  @MainActor
+  public func retryInitialConfiguration(completion: @escaping () -> Void) -> Bool {
+    guard let manager = dependencyContainer.configManager,
+      case .failed = manager.configUpdates.value else { return false }
+    manager.configUpdates.send(.retrieving)
+    Task {
+      await manager.fetchConfiguration()
+      completion()
+    }
+    return true
   }
 
   /// **For internal use only. Do not use this.**
