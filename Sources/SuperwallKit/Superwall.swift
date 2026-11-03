@@ -565,9 +565,10 @@ public final class Superwall: NSObject, ObservableObject {
     )
     self.init(dependencyContainer: dependencyContainer)
 
-    customerInfo = dependencyContainer.storage.get(LatestCustomerInfo.self) ?? .blank()
-
-    setSubscriptionStatus(assigned: dependencyContainer.storage.get(SubscriptionStatusKey.self) ?? .unknown)
+    if dependencyContainer.storage.usesWebEntitlements {
+      customerInfo = dependencyContainer.storage.get(LatestCustomerInfo.self) ?? .blank()
+      setSubscriptionStatus(assigned: dependencyContainer.storage.get(SubscriptionStatusKey.self) ?? .unknown)
+    }
     dependencyContainer.entitlementsInfo.subscriptionStatusDidSet(subscriptionStatus)
 
     addListeners()
@@ -1515,7 +1516,10 @@ public final class Superwall: NSObject, ObservableObject {
   /// - Parameter presentsFailureAlert: When `false`, suppresses the SDK's built-in
   ///   restore-failure alert on failure. Defaults to `true` for the public API.
   /// - Returns: A ``RestorationResult`` object that defines if the restoration was successful or not.
+  @MainActor
   func restorePurchases(presentsFailureAlert: Bool) async -> RestorationResult {
+    guard let finish = beginStoreKitOperation() else { return .failed(nil) }
+    defer { finish() }
     // Await config because we must have entitlements before restoring.
     _ = try? await dependencyContainer.configManager.configState
       .compactMap { $0.getConfig() }
@@ -1600,6 +1604,12 @@ public final class Superwall: NSObject, ObservableObject {
 
 // MARK: - PaywallViewControllerDelegate
 extension Superwall: PaywallViewControllerEventDelegate {
+  @MainActor
+  func beginStoreKitOperation(for paywall: PaywallViewController? = nil) -> (@MainActor @Sendable () -> Void)? {
+    guard let authorize = options.authorizeStoreKitOperation else { return {} }
+    return authorize(paywall)
+  }
+
   @MainActor
   // swiftlint:disable:next function_body_length
   func eventDidOccur(

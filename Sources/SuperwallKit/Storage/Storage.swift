@@ -74,6 +74,12 @@ class Storage {
 
   /// The disk cache.
   private let cache: Cache
+  let usesWebEntitlements: Bool
+
+  var webCustomerInfo: CustomerInfo? {
+    guard usesWebEntitlements else { return nil }
+    return get(LatestRedeemResponse.self)?.customerInfo
+  }
 
   private unowned let factory: DeviceHelperFactory & HasExternalPurchaseControllerFactory
 
@@ -82,8 +88,10 @@ class Storage {
   init(
     factory: DeviceHelperFactory & HasExternalPurchaseControllerFactory,
     cache: Cache = .makeDefault(),
-    coreDataManager: CoreDataManager? = nil
+    coreDataManager: CoreDataManager? = nil,
+    usesWebEntitlements: Bool = true
   ) {
+    self.usesWebEntitlements = usesWebEntitlements
     self.cache = cache
     self.factory = factory
 
@@ -156,7 +164,7 @@ class Storage {
   func reset() {
     coreDataManager.deleteAllEntities()
     cache.cleanUserFiles()
-    cache.cleanUserCodes()
+    if usesWebEntitlements { cache.cleanUserCodes() }
 
     queue.async { [weak self] in
       self?._assignments = nil

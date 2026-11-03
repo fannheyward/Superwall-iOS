@@ -1398,7 +1398,16 @@ extension PaywallViewController: PaywallMessageHandlerDelegate {
   }
 
   func eventDidOccur(_ paywallEvent: PaywallWebEvent) {
+    let finishStoreKitOperation: (@MainActor @Sendable () -> Void)?
+    switch paywallEvent {
+    case .initiatePurchase, .initiateRestore:
+      guard let finish = Superwall.shared.beginStoreKitOperation(for: self) else { return }
+      finishStoreKitOperation = finish
+    default:
+      finishStoreKitOperation = nil
+    }
     Task {
+      defer { finishStoreKitOperation?() }
       await eventDelegate?.eventDidOccur(
         paywallEvent,
         on: self

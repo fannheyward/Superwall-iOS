@@ -373,6 +373,7 @@ actor WebEntitlementRedeemer {
     _ type: RedeemType,
     injectedConfig: Config? = nil
   ) async {
+    guard storage.usesWebEntitlements else { return }
     let superwall = superwall ?? Superwall.shared
 
     // Only block concurrent .code redemptions if a paywall is currently open
@@ -904,6 +905,7 @@ actor WebEntitlementRedeemer {
     trigger: StripePollTrigger,
     completion: StripeCheckoutCompletion = .restore
   ) async -> StripePollOutcome {
+    guard storage.usesWebEntitlements else { return .noRedemptionFound }
     if hasActiveStripePoll {
       return .skippedInFlight
     }
@@ -1039,6 +1041,7 @@ actor WebEntitlementRedeemer {
     config: Config? = nil,
     isFirstTime: Bool = false
   ) async {
+    guard storage.usesWebEntitlements else { return }
     if !isFirstTime {
       if let entitlementsMaxAge = config?.web2appConfig?.entitlementsMaxAge
         ?? factory.makeEntitlementsMaxAge() {
