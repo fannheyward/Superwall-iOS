@@ -397,6 +397,10 @@ final class TransactionManager {
       )
 
       let restorationResult = await factory.restorePurchases()
+      // Reload receipts before evaluating an external restore so stale entitlements are not reported.
+      if restorationResult == .restored {
+        await factory.loadPurchasedProducts(config: nil)
+      }
       let outcome = await handleRestoreResult(
         restorationResult,
         paywallInfo: .empty(),
@@ -1051,6 +1055,7 @@ final class TransactionManager {
     )
   }
 
+  @MainActor
   private func presentAlert(
     title: String,
     message: String,
