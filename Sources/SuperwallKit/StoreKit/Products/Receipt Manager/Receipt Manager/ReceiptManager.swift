@@ -109,7 +109,6 @@ actor ReceiptManager {
   }
 
   private func registerAppTransactionIdIfNeeded() {
-    guard storage.usesWebEntitlements else { return }
     // Check if already sent
     if storage.get(AppTransactionIdSent.self) == true {
       return
@@ -185,7 +184,7 @@ actor ReceiptManager {
     storage.save(onDeviceSnapshot.customerInfo, forType: LatestDeviceCustomerInfo.self)
 
     // The other sources that merge with the device snapshot.
-    let webCustomerInfo = storage.webCustomerInfo
+    let webCustomerInfo = storage.get(LatestRedeemResponse.self)?.customerInfo
     let grantedEntitlements = Superwall.shared.entitlements.granted
 
     let mergedCustomerInfo: CustomerInfo

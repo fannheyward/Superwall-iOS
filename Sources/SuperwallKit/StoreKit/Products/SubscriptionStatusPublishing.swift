@@ -303,7 +303,7 @@ extension Superwall {
     }
     let storage: Storage = dependencyContainer.storage
     let deviceCustomerInfo = storage.get(LatestDeviceCustomerInfo.self) ?? .blank()
-    let webCustomerInfo = storage.webCustomerInfo ?? .blank()
+    let webCustomerInfo = storage.get(LatestRedeemResponse.self)?.customerInfo ?? .blank()
     customerInfo = deviceCustomerInfo.merging(with: webCustomerInfo, granting: entitlements.granted)
   }
 

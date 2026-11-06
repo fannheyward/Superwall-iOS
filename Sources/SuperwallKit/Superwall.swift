@@ -565,10 +565,9 @@ public final class Superwall: NSObject, ObservableObject {
     )
     self.init(dependencyContainer: dependencyContainer)
 
-    if dependencyContainer.storage.usesWebEntitlements {
-      customerInfo = dependencyContainer.storage.get(LatestCustomerInfo.self) ?? .blank()
-      setSubscriptionStatus(assigned: dependencyContainer.storage.get(SubscriptionStatusKey.self) ?? .unknown)
-    }
+    customerInfo = dependencyContainer.storage.get(LatestCustomerInfo.self) ?? .blank()
+
+    setSubscriptionStatus(assigned: dependencyContainer.storage.get(SubscriptionStatusKey.self) ?? .unknown)
     dependencyContainer.entitlementsInfo.subscriptionStatusDidSet(subscriptionStatus)
 
     addListeners()

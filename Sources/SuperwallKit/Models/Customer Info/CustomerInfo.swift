@@ -234,7 +234,7 @@ public final class CustomerInfo: NSObject, Codable {
     granted grantedEntitlements: Set<Entitlement>
   ) -> CustomerInfo {
     // Get web CustomerInfo
-    let webCustomerInfo = storage.webCustomerInfo ?? .blank()
+    let webCustomerInfo = storage.get(LatestRedeemResponse.self)?.customerInfo ?? .blank()
 
     // Get device CustomerInfo to preserve history
     // Use device-only CustomerInfo to avoid using stale cached web entitlements

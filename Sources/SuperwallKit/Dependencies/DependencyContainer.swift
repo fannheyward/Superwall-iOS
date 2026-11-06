@@ -79,14 +79,14 @@ final class DependencyContainer {
     options: SuperwallOptions? = nil,
     cache: Cache = .makeDefault()
   ) {
-    let options = options ?? SuperwallOptions()
     delegateAdapter = SuperwallDelegateAdapter()
-    storage = Storage(factory: self, cache: cache, usesWebEntitlements: options.usesWebEntitlements)
+    storage = Storage(factory: self, cache: cache)
     storage.configure(apiKey: apiKey)
     entitlementsInfo = EntitlementsInfo(
       storage: storage,
       delegateAdapter: delegateAdapter
     )
+    let options = options ?? SuperwallOptions()
 
     // In test environments, always bypass the app transaction check
     if TestModeManager.isTestEnvironment {

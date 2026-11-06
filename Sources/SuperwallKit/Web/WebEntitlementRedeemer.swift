@@ -406,7 +406,6 @@ actor WebEntitlementRedeemer: PostPurchaseRedeeming {
     _ type: RedeemType,
     injectedConfig: Config? = nil
   ) async {
-    guard storage.usesWebEntitlements else { return }
     let superwall = superwall ?? Superwall.shared
 
     // Only block concurrent .code redemptions if a paywall is currently open
@@ -997,7 +996,6 @@ actor WebEntitlementRedeemer: PostPurchaseRedeeming {
     trigger: StripePollTrigger,
     completion: StripeCheckoutCompletion = .restore
   ) async -> StripePollOutcome {
-    guard storage.usesWebEntitlements else { return .noRedemptionFound }
     if hasActiveStripePoll {
       return .skippedInFlight
     }
@@ -1151,7 +1149,6 @@ actor WebEntitlementRedeemer: PostPurchaseRedeeming {
     config: Config? = nil,
     isFirstTime: Bool = false
   ) async {
-    guard storage.usesWebEntitlements else { return }
     if factory.makeTestModeManager().isTestMode {
       return
     }
@@ -1212,7 +1209,6 @@ actor WebEntitlementRedeemer: PostPurchaseRedeeming {
   @discardableResult
   // swiftlint:disable:next cyclomatic_complexity
   func refreshWebEntitlements(dismissesCoveredPaywall: Bool = false) async -> CustomerInfo? {
-    guard storage.usesWebEntitlements else { return nil }
     let fetch = startEntitlementsFetch()
     let appUserId = factory.makeAppUserId()
     do {

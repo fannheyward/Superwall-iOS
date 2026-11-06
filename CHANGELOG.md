@@ -6,8 +6,8 @@ The changelog for `SuperwallKit`. Also see the [releases](https://github.com/sup
 
 ### Xboard fork
 
-- Retains the eight fixes from `4.18.3-patch.2`, including configuration retries, restore refreshes, subscription status observation, loading and archive fixes, and StoreKit identity isolation.
-- Keeps Web entitlement polling, direct refreshes, receipt redemption and cached Web entitlements disabled when `usesWebEntitlements` is false.
+- Retains configuration retries, restore refreshes, subscription status observation, loading and archive fixes, and purchase/restore identity authorization from `4.18.3-patch.2`.
+- Uses the upstream StoreKit and server entitlement merging, caching and refresh behavior. The fork-specific `usesWebEntitlements` option has been removed; purchase and restore identity authorization remains in place.
 - Updates configuration test fixtures for the retryable configuration publisher.
 
 ### Enhancements
