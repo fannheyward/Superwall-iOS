@@ -207,10 +207,8 @@ protocol RestoreAccessFactory: AnyObject {
 }
 
 protocol ConfigStateFactory: AnyObject {
-  /// Publishes config changes. Its `value` can briefly lag the config, so
-  /// subscribe to it to hear about changes and use ``currentConfig()`` to
-  /// read the config.
-  func makeConfigState() -> CurrentValueSubject<ConfigState, any Error>
+  /// 订阅配置变化；同步读取使用 `currentConfig()`。
+  func makeConfigState() -> AnyPublisher<ConfigState, Error>
 
   /// The config right now, or `nil` if it hasn't arrived.
   func currentConfig() -> Config?

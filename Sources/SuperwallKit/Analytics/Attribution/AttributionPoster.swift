@@ -73,7 +73,7 @@ final class AttributionPoster {
     // to see the toggles to detect a transition, so we dedup on the bool
     // *before* filtering. This fires once when the flag first becomes true,
     // and again if it goes true → false → true mid-session.
-    configManager.configState
+    configManager.configUpdates
       .compactMap { $0.getConfig() }
       .map { $0.attribution?.appleSearchAds?.enabled == true }
       .removeDuplicates()

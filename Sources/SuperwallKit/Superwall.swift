@@ -694,7 +694,7 @@ public final class Superwall: NSObject, ObservableObject {
   }
 
   func listenToConfig() {
-    dependencyContainer.configManager.configState
+    dependencyContainer.configManager.configUpdates
       .receive(on: DispatchQueue.main)
       .subscribe(
         Subscribers.Sink(
@@ -1051,6 +1051,20 @@ public final class Superwall: NSObject, ObservableObject {
       await refreshConfiguration()
       completion?()
     }
+  }
+
+  /// Retries a failed initial configuration on this instance. Completion runs
+  /// after the attempt, including its initial StoreKit read on success.
+  @MainActor
+  public func retryInitialConfiguration(completion: @escaping () -> Void) -> Bool {
+    guard let manager = dependencyContainer.configManager,
+      case .failed = manager.store.state.configState else { return false }
+    manager.store.update(ConfigUpdate.retrieving)
+    Task {
+      await manager.fetchConfiguration()
+      completion()
+    }
+    return true
   }
 
   /// **For internal use only. Do not use this.**
@@ -1483,7 +1497,12 @@ public final class Superwall: NSObject, ObservableObject {
   /// - Parameter presentsFailureAlert: When `false`, suppresses the SDK's built-in
   ///   restore-failure alert on failure. Defaults to `true` for the public API.
   /// - Returns: A ``RestorationResult`` object that defines if the restoration was successful or not.
+  @MainActor
   func restorePurchases(presentsFailureAlert: Bool) async -> RestorationResult {
+    #if canImport(WebKit)
+    guard let finish = beginStoreKitOperation() else { return .failed(nil) }
+    defer { finish() }
+    #endif
     // Await config because we must have entitlements before restoring.
     _ = try? await dependencyContainer.configManager.configState
       .compactMap { $0.getConfig() }
@@ -1620,6 +1639,12 @@ public final class Superwall: NSObject, ObservableObject {
 // MARK: - PaywallViewControllerDelegate
 #if canImport(WebKit)
 extension Superwall: PaywallViewControllerEventDelegate {
+  @MainActor
+  func beginStoreKitOperation(for paywall: PaywallViewController? = nil) -> (@MainActor @Sendable () -> Void)? {
+    guard let authorize = options.authorizeStoreKitOperation else { return {} }
+    return authorize(paywall)
+  }
+
   @MainActor
   // swiftlint:disable:next function_body_length
   func eventDidOccur(

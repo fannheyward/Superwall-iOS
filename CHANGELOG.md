@@ -4,6 +4,12 @@ The changelog for `SuperwallKit`. Also see the [releases](https://github.com/sup
 
 ## 4.19.1
 
+### Xboard fork
+
+- 在官方配置状态存储上保留首次失败重试和长期观察；采用官方失败状态、当前配置读取和离线权益刷新修复，移除重复接口及旧测试夹具改动。
+- 保留恢复收据重读、订阅状态监听、恢复提示主线程隔离、Customer Center 结果展示、失败任务释放、归档 HTTP 校验、loading 竞态修复及购买/恢复身份锁定。
+- 保留官方权益合并行为和新增平台分支；身份授权接口仅在支持付费墙的平台启用。
+
 ### Enhancements
 
 - Adds watchOS 8+ and tvOS 15+ support through Swift Package Manager, for purchases, subscription status, entitlements, user attributes and events. Paywalls can't be shown there, so when one would show, `register` runs non-gated features and returns an error for gated ones.

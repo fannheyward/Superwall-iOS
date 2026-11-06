@@ -35,7 +35,15 @@ class ConfigManager {
   /// ``ConfigUpdate`` rather than by sending to it. Sent changes with the
   /// store unlocked, so it can lag the store while another thread is
   /// sending: read ``config`` for the current config.
-  let configState = CurrentValueSubject<ConfigState, Error>(.retrieving)
+  let configUpdates = CurrentValueSubject<ConfigState, Never>(.retrieving)
+
+  // 单次等待可以失败，长期观察必须保留以接收后续重试结果。
+  var configState: AnyPublisher<ConfigState, Error> {
+    configUpdates.tryMap { state in
+      if let error = state.failure { throw error }
+      return state
+    }.eraseToAnyPublisher()
+  }
 
   /// Convenience variable to access config.
   var config: Config? {
@@ -111,13 +119,7 @@ class ConfigManager {
     // Subscribers can take other locks, so they're sent changes once the
     // store is unlocked, in the order the changes were applied.
     let publications = OrderedDelivery<ConfigState> { [weak self] state in
-      self?.configState.send(state)
-      // A failure is sent as a value too, so `configurationStatus` sees it,
-      // then completes `configState`. Once completed it sends nothing more,
-      // though the store can still change.
-      if let error = state.failure {
-        self?.configState.send(completion: .failure(error))
-      }
+      self?.configUpdates.send(state)
     }
     store.observe { [weak store] before, after in
       guard after.publications != before.publications else {

@@ -675,7 +675,7 @@ struct DeviceHelperTests {
     )
     setMMPFlag(false, on: dependencyContainer)
     // Stands in for a publication that hasn't caught up yet.
-    dependencyContainer.configManager.configState.send(.retrieved(makeConfig(mmpEnabled: true)))
+    dependencyContainer.configManager.configUpdates.send(.retrieved(makeConfig(mmpEnabled: true)))
 
     #expect(await deviceHelper.ipAttributesForMMPMatch().isEmpty)
     #expect(await fetches.count == 0)

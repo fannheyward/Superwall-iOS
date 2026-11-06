@@ -43,6 +43,7 @@ struct ConfigManagerState {
 
 /// The ways ``ConfigManagerState`` can change.
 enum ConfigUpdate: Reducer {
+  case retrieving
   /// The config request is being retried.
   case retrying(attempt: Int)
   /// Records a retry of a request that doesn't change the config state, such
@@ -56,6 +57,9 @@ enum ConfigUpdate: Reducer {
   func reduce(_ state: ConfigManagerState) -> ConfigManagerState {
     var state = state
     switch self {
+    case .retrieving:
+      state.configState = .retrieving
+      state.publications += 1
     case .retrying(let attempt):
       state.retryCount = attempt
       state.configState = .retrying

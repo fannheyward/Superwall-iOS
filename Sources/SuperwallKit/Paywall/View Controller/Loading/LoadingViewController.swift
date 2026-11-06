@@ -43,7 +43,8 @@ final class LoadingViewController: LoadingHostingController {
   func hide() {
     model.isHidden = true
     DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(300)) { [weak self] in
-      self?.view.isHidden = true
+      guard let self, self.model.isHidden else { return }
+      self.view.isHidden = true
     }
   }
 }

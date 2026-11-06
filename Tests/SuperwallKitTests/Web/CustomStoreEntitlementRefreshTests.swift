@@ -682,6 +682,32 @@ struct CustomStoreEntitlementRefreshTests {
     #expect(result.parameters.audienceFilterParams["$store"] as? String == "STRIPE")
   }
 
+  @Test("服务器刷新按官方规则合并本机与服务器权益", arguments: [
+    (false, true), (true, false), (true, true), (false, false)
+  ])
+  func refreshCustomerInfo_mergesDeviceAndServerEntitlements(states: (Bool, Bool)) async {
+    defer { clearEntitlementsState() }
+    let device = Entitlement(id: "xboard_pro", isActive: states.0, store: .appStore)
+    let server = Entitlement(id: "xboard_pro", isActive: states.1, store: .custom)
+    dependencyContainer.storage.save(
+      CustomerInfo(subscriptions: [], nonSubscriptions: [], entitlements: [device]),
+      forType: LatestDeviceCustomerInfo.self
+    )
+    let superwall = Superwall(dependencyContainer: dependencyContainer)
+    let network = NetworkMock(options: dependencyContainer.makeSuperwallOptions(), factory: dependencyContainer)
+    network.getEntitlementsResponse = entitlementsResponse([server])
+    dependencyContainer.webEntitlementRedeemer = makeRedeemer(network: network, superwall: superwall)
+    dependencyContainer.configManager.store.update(ConfigUpdate.retrieved(.stub()))
+
+    let customerInfo = await superwall.refreshCustomerInfo()
+
+    #expect(network.getEntitlementsCallCount == 1)
+    #expect(customerInfo.entitlements.count == 1)
+    #expect(customerInfo.entitlements.first?.id == "xboard_pro")
+    #expect(customerInfo.entitlements.first?.isActive == (states.0 || states.1))
+    #expect(dependencyContainer.storage.get(LatestRedeemResponse.self) != nil)
+  }
+
   // MARK: - Public refresh API
 
   @Test("refreshCustomerInfo fetches entitlements and returns the updated customer info")

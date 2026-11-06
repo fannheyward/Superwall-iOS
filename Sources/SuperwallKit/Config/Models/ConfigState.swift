@@ -24,8 +24,7 @@ enum ConfigState: Equatable {
   case retrieving
   case retrying
   case retrieved(Config)
-  /// The config couldn't be fetched. `configState` sends this, then completes
-  /// with the error.
+  /// 配置失败只结束当前等待，长期观察仍可接收重试后的状态。
   case failed(Error)
 
   /// Why the config couldn't be fetched, if it couldn't.

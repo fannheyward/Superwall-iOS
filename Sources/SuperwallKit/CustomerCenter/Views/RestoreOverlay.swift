@@ -12,6 +12,7 @@ struct RestoreOverlay: View {
   @ObservedObject var viewModel: CustomerCenterViewModel
   @Environment(\.customerCenterStrings) private var strings
   @Environment(\.openURL) private var openURL
+  @State private var isResultPresented = false
 
   var body: some View {
     ZStack {
@@ -27,22 +28,30 @@ struct RestoreOverlay: View {
       }
     }
     .animation(.default, value: viewModel.restoreState)
+    .onChange(of: viewModel.restoreState) { state in
+      isResultPresented = state == .restored || state == .notFound
+    }
     .alert(
       strings.string(alertTitleKey),
-      isPresented: Binding(
-        get: { viewModel.restoreState == .restored || viewModel.restoreState == .notFound },
-        set: { if !$0 { viewModel.restoreState = .idle } }
-      ),
+      isPresented: $isResultPresented,
       actions: {
         if viewModel.restoreState == .notFound {
           if viewModel.showsUpdateBanner, let url = viewModel.appStoreURL {
-            Button(strings.string("customer_center_update_action")) { openURL(url) }
+            Button(strings.string("customer_center_update_action")) {
+              viewModel.restoreState = .idle
+              openURL(url)
+            }
           }
           if let mail = viewModel.supportMailtoURL {
-            Button(strings.string("customer_center_path_contact_support")) { openURL(mail) }
+            Button(strings.string("customer_center_path_contact_support")) {
+              viewModel.restoreState = .idle
+              openURL(mail)
+            }
           }
         }
-        Button(strings.string("customer_center_done"), role: .cancel) {}
+        Button(strings.string("customer_center_done"), role: .cancel) {
+          viewModel.restoreState = .idle
+        }
       },
       message: {
         Text(strings.string(alertMessageKey))

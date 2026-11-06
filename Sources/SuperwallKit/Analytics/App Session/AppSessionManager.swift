@@ -73,7 +73,7 @@ class AppSessionManager {
   }
 
   func listenForAppSessionTimeout() {
-    cancellable = configManager.configState
+    cancellable = configManager.configUpdates
       .compactMap { $0.getConfig() }
       .sink(
         receiveCompletion: { _ in },

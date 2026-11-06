@@ -22,9 +22,8 @@ actor TaskCoalescer<Executor: TaskExecutor> {
     }
 
     let task = Task<Executor.Output, Error> {
-      let output = try await executor.perform(using: input)
-      activeTasks[hashValue] = nil
-      return output
+      defer { activeTasks[hashValue] = nil }
+      return try await executor.perform(using: input)
     }
 
     activeTasks[hashValue] = task

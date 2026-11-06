@@ -149,7 +149,7 @@ struct ConfigManagerStoreTests {
     #expect(received == [.retrieving, .retrieved(config), .retrieved(config)])
   }
 
-  @Test("A failure is sent, then completes configState, and nothing is sent after")
+  @Test("一次等待失败不终止长期配置观察，后续等待能取得新配置")
   func setFailedCompletes() {
     let (configManager, _, container) = makeConfigManager()
     defer { withExtendedLifetime(container) {} }
@@ -161,11 +161,23 @@ struct ConfigManagerStoreTests {
     )
     defer { cancellable.cancel() }
 
+    var updates: [ConfigState] = []
+    let observation = configManager.configUpdates.sink { updates.append($0) }
+    defer { observation.cancel() }
+    let config = Config.stub()
     configManager.store.update(ConfigUpdate.failed(TestError("offline")))
-    configManager.store.update(ConfigUpdate.retrieved(.stub()))
+    configManager.store.update(ConfigUpdate.retrieving)
+    configManager.store.update(ConfigUpdate.retrieved(config))
 
-    #expect(received == [.retrieving, .failed(TestError("offline"))])
-    #expect((received.last?.failure as? TestError)?.message == "offline")
+    #expect(received == [.retrieving])
+    #expect(updates == [.retrieving, .failed(TestError("offline")), .retrieving, .retrieved(config)])
+    var recovered: Config?
+    let nextWait = configManager.configState.sink(
+      receiveCompletion: { _ in },
+      receiveValue: { recovered = $0.getConfig() }
+    )
+    defer { nextWait.cancel() }
+    #expect(recovered?.requestId == config.requestId)
     if case .failure(let error)? = completion {
       #expect((error as? TestError)?.message == "offline")
     } else {
@@ -189,6 +201,41 @@ struct ConfigManagerStoreTests {
       try? await Task.sleep(nanoseconds: 10_000_000)
     }
     #expect(superwall.configurationStatus == .failed)
+  }
+
+  @Test("配置重试拒绝重复请求，失败后回调并允许再次重试")
+  @MainActor
+  func retryInitialConfigurationFailureCompletesAndCanRetry() async {
+    let container = DependencyContainer()
+    let network = NetworkMock(options: SuperwallOptions(), factory: container)
+    let storage = StorageMock()
+    defer { withExtendedLifetime((network, storage)) {} }
+    let configManager = ConfigManager(
+      options: SuperwallOptions(),
+      storeKitManager: container.storeKitManager,
+      storage: storage,
+      network: network,
+      paywallManager: container.paywallManager,
+      deviceHelper: container.deviceHelper,
+      entitlementsInfo: container.entitlementsInfo,
+      webEntitlementRedeemer: container.webEntitlementRedeemer,
+      factory: container
+    )
+    container.configManager = configManager
+    let superwall = Superwall(dependencyContainer: container)
+    #expect(!superwall.retryInitialConfiguration {})
+    network.configReturnValue = .failure(TestError("offline"))
+    configManager.store.update(ConfigUpdate.failed(TestError("offline")))
+    for _ in 0..<2 {
+      var completed = false
+      #expect(superwall.retryInitialConfiguration { completed = true })
+      #expect(!superwall.retryInitialConfiguration {})
+      for _ in 0..<1_000 where !completed {
+        try? await Task.sleep(nanoseconds: 10_000_000)
+      }
+      #expect(completed)
+      #expect((configManager.store.state.configState.failure as? TestError)?.message == "offline")
+    }
   }
 
   @Test("Updates from many threads are sent in the order they were applied")
@@ -223,7 +270,7 @@ struct ConfigManagerStoreTests {
     #expect(sent.count == configs.count + 1)
     #expect(Set(sent.dropFirst()).count == configs.count)
     #expect(sent.last == configManager.config?.buildId)
-    #expect(configManager.configState.value == configManager.store.state.configState)
+    #expect(configManager.configUpdates.value == configManager.store.state.configState)
   }
 
   @Test("A subscriber that takes a lock can't deadlock with a thread holding it that reads the config")
