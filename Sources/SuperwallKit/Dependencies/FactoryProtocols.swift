@@ -204,7 +204,8 @@ protocol RestoreAccessFactory: AnyObject {
 }
 
 protocol ConfigStateFactory: AnyObject {
-  func makeConfigState() -> CurrentValueSubject<ConfigState, any Error>
+  func makeConfig() -> Config?
+  func makeConfigState() -> AnyPublisher<ConfigState, Error>
 }
 
 protocol AppIdFactory: AnyObject {

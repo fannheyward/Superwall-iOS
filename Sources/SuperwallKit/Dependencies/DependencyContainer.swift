@@ -758,7 +758,11 @@ extension DependencyContainer: RestoreAccessFactory {
 
 // MARK: - ConfigStateFactory
 extension DependencyContainer: ConfigStateFactory {
-  func makeConfigState() -> CurrentValueSubject<ConfigState, any Error> {
+  func makeConfig() -> Config? {
+    return configManager.config
+  }
+
+  func makeConfigState() -> AnyPublisher<ConfigState, Error> {
     return configManager.configState
   }
 }

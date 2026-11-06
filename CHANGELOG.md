@@ -4,6 +4,12 @@ The changelog for `SuperwallKit`. Also see the [releases](https://github.com/sup
 
 ## 4.19.0
 
+### Xboard fork
+
+- Retains configuration retries, restore refreshes, subscription status observation, loading and archive fixes, and purchase/restore identity authorization from `4.18.3-patch.2`.
+- Uses the upstream StoreKit and server entitlement merging, caching and refresh behavior. The fork-specific `usesWebEntitlements` option has been removed; purchase and restore identity authorization remains in place.
+- Updates configuration test fixtures for the retryable configuration publisher.
+
 ### Enhancements
 
 - Adds native macOS 12+ support, including paywalls, SwiftUI embedding, purchases, Customer Center and Test Mode. See the Mac example to get started.

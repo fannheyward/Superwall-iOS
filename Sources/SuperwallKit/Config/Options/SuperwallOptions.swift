@@ -22,6 +22,10 @@ public final class SuperwallOptions: NSObject, Encodable {
   /// Configures the appearance and behaviour of paywalls.
   public var paywalls = PaywallOptions()
 
+  /// Acquires the host's identity lease before a paywall purchase or restore starts.
+  /// Returning nil cancels the action. The SDK calls the returned closure when it finishes.
+  @nonobjc public var authorizeStoreKitOperation: (@MainActor @Sendable (PaywallViewController?) -> (@MainActor @Sendable () -> Void)?)?
+
   /// Configures the Customer Center presented via ``Superwall/presentCustomerCenter(configuration:from:delegate:onDismiss:)``.
   public var customerCenter = CustomerCenterConfiguration.default
 

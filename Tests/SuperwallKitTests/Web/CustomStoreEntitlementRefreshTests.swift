@@ -682,6 +682,32 @@ struct CustomStoreEntitlementRefreshTests {
     #expect(result.parameters.audienceFilterParams["$store"] as? String == "STRIPE")
   }
 
+  @Test("服务器刷新按官方规则合并本机与服务器权益", arguments: [
+    (false, true), (true, false), (true, true), (false, false)
+  ])
+  func refreshCustomerInfo_mergesDeviceAndServerEntitlements(states: (Bool, Bool)) async {
+    defer { clearEntitlementsState() }
+    let device = Entitlement(id: "xboard_pro", isActive: states.0, store: .appStore)
+    let server = Entitlement(id: "xboard_pro", isActive: states.1, store: .custom)
+    dependencyContainer.storage.save(
+      CustomerInfo(subscriptions: [], nonSubscriptions: [], entitlements: [device]),
+      forType: LatestDeviceCustomerInfo.self
+    )
+    let superwall = Superwall(dependencyContainer: dependencyContainer)
+    let network = NetworkMock(options: dependencyContainer.makeSuperwallOptions(), factory: dependencyContainer)
+    network.getEntitlementsResponse = entitlementsResponse([server])
+    dependencyContainer.webEntitlementRedeemer = makeRedeemer(network: network, superwall: superwall)
+    dependencyContainer.configManager.configUpdates.send(.retrieved(.stub()))
+
+    let customerInfo = await superwall.refreshCustomerInfo()
+
+    #expect(network.getEntitlementsCallCount == 1)
+    #expect(customerInfo.entitlements.count == 1)
+    #expect(customerInfo.entitlements.first?.id == "xboard_pro")
+    #expect(customerInfo.entitlements.first?.isActive == (states.0 || states.1))
+    #expect(dependencyContainer.storage.get(LatestRedeemResponse.self) != nil)
+  }
+
   // MARK: - Public refresh API
 
   @Test("refreshCustomerInfo fetches entitlements and returns the updated customer info")
@@ -695,7 +721,7 @@ struct CustomStoreEntitlementRefreshTests {
     network.getEntitlementsResponse = entitlementsResponse([customEntitlement])
     dependencyContainer.webEntitlementRedeemer = makeRedeemer(network: network, superwall: superwall)
 
-    dependencyContainer.configManager.configState.send(.retrieved(.stub()))
+    dependencyContainer.configManager.configUpdates.send(.retrieved(.stub()))
     let customerInfo = await superwall.refreshCustomerInfo()
 
     #expect(network.getEntitlementsCallCount == 1)
@@ -730,7 +756,7 @@ struct CustomStoreEntitlementRefreshTests {
     )
     dependencyContainer.webEntitlementRedeemer = makeRedeemer(network: network, superwall: superwall)
 
-    dependencyContainer.configManager.configState.send(.retrieved(.stub()))
+    dependencyContainer.configManager.configUpdates.send(.retrieved(.stub()))
     let customerInfo = await superwall.refreshCustomerInfo()
 
     #expect(customerInfo.subscriptions.map(\.transactionId) == ["renewal_1"])
@@ -745,7 +771,7 @@ struct CustomStoreEntitlementRefreshTests {
     let network = NetworkMock(options: dependencyContainer.makeSuperwallOptions(), factory: dependencyContainer)
     // No response: the fetch fails, as it does offline.
     dependencyContainer.webEntitlementRedeemer = makeRedeemer(network: network, superwall: superwall)
-    dependencyContainer.configManager.configState.send(completion: .failure(NetworkError.unknown))
+    dependencyContainer.configManager.configUpdates.send(.failed(NetworkError.unknown))
 
     // Polled with a time limit, so a refresh that never returns fails the test
     // instead of hanging it.
@@ -772,7 +798,7 @@ struct CustomStoreEntitlementRefreshTests {
     network.getEntitlementsResponse = entitlementsResponse([Entitlement(id: "pro", isActive: true)])
     dependencyContainer.webEntitlementRedeemer = makeRedeemer(network: network, superwall: superwall)
 
-    dependencyContainer.configManager.configState.send(.retrieved(.stub()))
+    dependencyContainer.configManager.configUpdates.send(.retrieved(.stub()))
     let customerInfo = await superwall.refreshCustomerInfo()
 
     #expect(network.getEntitlementsCallCount == 0)
@@ -792,7 +818,7 @@ struct CustomStoreEntitlementRefreshTests {
     try? await Task.sleep(nanoseconds: 100_000_000)
     // Config arrives and turns test mode on.
     turnOnTestMode()
-    dependencyContainer.configManager.configState.send(.retrieved(.stub()))
+    dependencyContainer.configManager.configUpdates.send(.retrieved(.stub()))
     _ = await refresh.value
 
     #expect(network.getEntitlementsCallCount == 0)

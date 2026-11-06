@@ -24,7 +24,7 @@ enum ConfigState: Equatable {
   case retrieving
   case retrying
   case retrieved(Config)
-  case failed
+  case failed(Error)
 
   func getConfig() -> Config? {
     switch self {

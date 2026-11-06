@@ -83,7 +83,7 @@ final class MMPAttributionManager {
     lock.unlock()
     isMatchPending.send(true)
 
-    pendingMatch = configManager.configState
+    pendingMatch = configManager.configUpdates
       .compactMap { $0.getConfig() }
       .map { $0.attribution?.mmp?.enabled == true }
       .removeDuplicates()
